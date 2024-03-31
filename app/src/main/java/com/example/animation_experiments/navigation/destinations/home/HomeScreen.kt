@@ -30,7 +30,8 @@ fun HomeScreen(
     navigateToLines: () -> Unit,
     navigateToVisibility: () -> Unit,
     navigateToGraphicsLayer: () -> Unit,
-    navigateToColor: () -> Unit
+    navigateToColor: () -> Unit,
+    navigateToGraphics: () -> Unit
 ) {
 
     val colors = listOf(
@@ -71,6 +72,10 @@ fun HomeScreen(
         ItemRow(
             navigateTarget = navigateToColor,
             rowText = "Color"
+        )
+        ItemRow(
+            navigateTarget = navigateToGraphics,
+            rowText = "Graphics"
         )
     }
 }
@@ -114,6 +119,7 @@ private fun HomeContentPreview() {
         navigateToLines = {},
         navigateToVisibility = {},
         navigateToGraphicsLayer = {},
-        navigateToColor = {}
+        navigateToColor = {},
+        navigateToGraphics = {}
     )
 }

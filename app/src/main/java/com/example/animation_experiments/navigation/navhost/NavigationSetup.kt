@@ -7,6 +7,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import com.example.animation_experiments.navigation.destinations.Screen
 import com.example.animation_experiments.navigation.destinations.color.ColorComposable
+import com.example.animation_experiments.navigation.destinations.graphics.GraphicsComposable
 import com.example.animation_experiments.navigation.destinations.graphicslayer.GraphicsLayerComposable
 import com.example.animation_experiments.navigation.destinations.home.HomeComposable
 import com.example.animation_experiments.navigation.destinations.lines.LinesComposable
@@ -34,6 +35,9 @@ fun NavigationSetup(
             },
             navigateToColor = {
                 navController.navigate(Screen.Color.route)
+            },
+            navigateToGraphics = {
+                navController.navigate(Screen.Graphics.route)
             }
         )
 
@@ -50,6 +54,10 @@ fun NavigationSetup(
         }
 
         ColorComposable {
+            navController.popBackStack()
+        }
+
+        GraphicsComposable {
             navController.popBackStack()
         }
 

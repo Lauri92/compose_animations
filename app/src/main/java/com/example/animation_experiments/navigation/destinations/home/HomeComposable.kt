@@ -12,6 +12,7 @@ fun NavGraphBuilder.HomeComposable(
     navigateToVisibility: () -> Unit,
     navigateToGraphicsLayer: () -> Unit,
     navigateToColor: () -> Unit,
+    navigateToGraphics: () -> Unit,
 ) {
     composable(
         route = Screen.Home.route,
@@ -34,7 +35,8 @@ fun NavGraphBuilder.HomeComposable(
                 navigateToLines = navigateToLines,
                 navigateToVisibility = navigateToVisibility,
                 navigateToGraphicsLayer = navigateToGraphicsLayer,
-                navigateToColor = navigateToColor
+                navigateToColor = navigateToColor,
+                navigateToGraphics = navigateToGraphics
             )
         }
     }

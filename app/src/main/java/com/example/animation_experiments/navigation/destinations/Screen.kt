@@ -6,4 +6,5 @@ sealed class Screen(val route: String) {
     data object Visibility : Screen("visibility")
     data object GraphicsLayer : Screen("graphicsLayer")
     data object Color : Screen("color")
+    data object Graphics : Screen("graphics")
 }
