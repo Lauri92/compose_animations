@@ -189,27 +189,13 @@ fun GraphicsScreen(navigateHome: () -> Unit) {
 
                 )
 
-                val centerX = 300f
+                val centerX = 150f
                 val centerY = 1500f
-                val radius = 200f
-                val numPoints = 500
-                val points = mutableListOf<Offset>()
-
+                val radius = 100f
+                val numPoints = 1000
 
                 val boundingSquareSide =
                     2 * radius // Side length of the square that encloses the circle
-
-                /*
-                // Generate random points within the circular area
-                repeat(numPoints) {
-                    val angle = Random.nextDouble(0.0, 2 * Math.PI)
-                    val randomRadius = Random.nextDouble(0.0, radius.toDouble()).toFloat()
-                    val x = centerX + randomRadius * cos(angle).toFloat()
-                    val y = centerY + randomRadius * sin(angle).toFloat()
-                    points.add(Offset(x, y))
-                }
-
-                 */
 
                 repeat(numPoints) {
                     var point: Offset
@@ -228,26 +214,21 @@ fun GraphicsScreen(navigateHome: () -> Unit) {
                         )
                     ) // Reject points outside the circle
 
-                    points.add(point)
+                    val color = generateRandomColor()
+
+                    drawCircle(
+                        color = color,
+                        center = point,
+                        radius = 1f
+                    )
                 }
 
                 drawCircle(
-                    color = Color.Blue,
+                    color = Color.Transparent,
                     center = Offset(centerX, centerY),
                     radius = radius,
-                    style = Stroke(width = 2f)
+                    style = Stroke(width = 2f),
                 )
-
-                // Draw points inside the circle
-                drawPoints(
-                    color = Color.Green,
-                    pointMode = PointMode.Points,
-                    cap = Round,
-                    points = points,
-                    strokeWidth = 10f
-                )
-
-
             }
         }
     }
