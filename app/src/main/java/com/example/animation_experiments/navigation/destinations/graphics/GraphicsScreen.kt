@@ -1,22 +1,16 @@
 package com.example.animation_experiments.navigation.destinations.graphics
 
 import android.os.Build
-import android.util.Log
 import android.view.MotionEvent
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -33,11 +27,13 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -52,13 +48,11 @@ import androidx.compose.ui.graphics.StrokeCap.Companion.Round
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
-import androidx.compose.ui.input.pointer.PointerEvent
-import androidx.compose.ui.input.pointer.PointerInputChange
-import androidx.compose.ui.input.pointer.consumePositionChange
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import kotlin.math.sqrt
 import kotlin.random.Random
 
@@ -141,45 +135,51 @@ fun GraphicsScreen(navigateHome: () -> Unit) {
                 }
 
                 "pointer" -> {
-                    var ballPosition by remember { mutableStateOf(Offset.Zero) }
 
-                    val alpha = remember { Animatable(1f) }
+                    val balls = remember { mutableStateListOf<Offset>() }
+                    val alphaValues =
+                        remember { mutableStateMapOf<Offset, Animatable<Float, AnimationVector1D>>() }
+                    val scope = rememberCoroutineScope()
 
-                    LaunchedEffect(ballPosition) {
-                        alpha.snapTo(1f)
-                        alpha.animateTo(
-                            targetValue = 0f,
-                            animationSpec = tween(durationMillis = 1000)
-                        )
+                    fun startFadeAnimation(ball: Offset) {
+                        val alpha = Animatable(0.5f)
+                        alphaValues[ball] = alpha
+                        scope.launch {
+                            alpha.animateTo(
+                                targetValue = 0f,
+                                animationSpec = tween(durationMillis = 1000)
+                            )
+                        }
                     }
-
 
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
                             .pointerInteropFilter {
-                                Log.d("PointerEvent", "pointerInput: $it")
                                 if (it.action == MotionEvent.ACTION_DOWN) {
-                                    ballPosition = Offset(it.x, it.y)
+                                    balls.add(Offset(it.x, it.y))
+                                    startFadeAnimation(Offset(it.x, it.y))
                                 }
                                 false
                             }
                             .pointerInput(Unit) {
                                 detectDragGestures(
                                     onDrag = { change, dragAmount ->
-                                        ballPosition += dragAmount
+                                        balls.add(change.position)
+                                        startFadeAnimation(change.position)
                                     }
                                 )
                             }
                     ) {
                         Canvas(modifier = Modifier.fillMaxSize()) {
-
-
-                            drawCircle(
-                                color = Color.Blue.copy(alpha = alpha.value),
-                                center = ballPosition,
-                                radius = 10f
-                            )
+                            balls.forEach { ball ->
+                                val alpha = alphaValues[ball] ?: return@forEach
+                                drawCircle(
+                                    color = Color.Green.copy(alpha = alpha.value),
+                                    center = ball,
+                                    radius = 25f
+                                )
+                            }
                         }
                     }
                 }
@@ -369,5 +369,5 @@ private fun generateRandomColor(): Color {
 @Preview
 @Composable
 private fun GraphicsScreenPreview() {
-    GraphicsScreen({})
+    GraphicsScreen(navigateHome = {})
 }
