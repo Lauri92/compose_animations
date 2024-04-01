@@ -41,6 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.PointMode
@@ -136,13 +137,15 @@ fun GraphicsScreen(navigateHome: () -> Unit) {
 
                 "pointer" -> {
 
-                    val balls = remember { mutableStateListOf<Offset>() }
+                    val balls = remember { mutableStateListOf<Pair<Offset, Brush>>() }
                     val alphaValues =
                         remember { mutableStateMapOf<Offset, Animatable<Float, AnimationVector1D>>() }
                     val scope = rememberCoroutineScope()
 
                     fun startFadeAnimation(ball: Offset) {
-                        val alpha = Animatable(0.5f)
+                        val alpha = alphaValues[ball] ?: Animatable(0.5f).also {
+                            alphaValues[ball] = it
+                        }
                         alphaValues[ball] = alpha
                         scope.launch {
                             alpha.animateTo(
@@ -157,7 +160,9 @@ fun GraphicsScreen(navigateHome: () -> Unit) {
                             .fillMaxSize()
                             .pointerInteropFilter {
                                 if (it.action == MotionEvent.ACTION_DOWN) {
-                                    balls.add(Offset(it.x, it.y))
+                                    val position = Offset(it.x, it.y)
+                                    val gradient = generateRainbowGradient()
+                                    balls.add(position to gradient)
                                     startFadeAnimation(Offset(it.x, it.y))
                                 }
                                 false
@@ -165,17 +170,20 @@ fun GraphicsScreen(navigateHome: () -> Unit) {
                             .pointerInput(Unit) {
                                 detectDragGestures(
                                     onDrag = { change, dragAmount ->
-                                        balls.add(change.position)
-                                        startFadeAnimation(change.position)
+                                        val position = change.position
+                                        val gradient = generateRainbowGradient()
+                                        balls.add(position to gradient)
+                                        startFadeAnimation(position)
                                     }
                                 )
                             }
                     ) {
                         Canvas(modifier = Modifier.fillMaxSize()) {
-                            balls.forEach { ball ->
+                            balls.forEach { (ball, gradient) ->
                                 val alpha = alphaValues[ball] ?: return@forEach
                                 drawCircle(
-                                    color = Color.Green.copy(alpha = alpha.value),
+                                    brush = gradient,
+                                    alpha = alpha.value,
                                     center = ball,
                                     radius = 25f
                                 )
@@ -363,6 +371,34 @@ private fun generateRandomColor(): Color {
     val green = Random.nextFloat()
     val blue = Random.nextFloat()
     return Color(red, green, blue)
+}
+
+fun generateRBGGradient(): Brush {
+    val colors = listOf(Color.Red, Color.Green, Color.Blue)
+    return Brush.linearGradient(colors)
+}
+
+fun generateRainbowGradient(): Brush {
+    val colors = listOf(
+        Color(0xFFFF0000),  // Red
+        Color(0xFFFF7F00),  // Orange
+        Color(0xFFFFFF00),  // Yellow
+        Color(0xFF7FFF00),  // Chartreuse
+        Color(0xFF00FF00),  // Green
+        Color(0xFF00FF7F),  // Spring Green
+        Color(0xFF00FFFF),  // Cyan
+        Color(0xFF007FFF),  // Azure
+        Color(0xFF0000FF),  // Blue
+        Color(0xFF8A2BE2),  // Blue Violet
+        Color(0xFFFF00FF),  // Magenta
+        Color(0xFFFF007F)   // Rose
+    )
+    return Brush.linearGradient(colors)
+}
+
+fun generateRandomGradient(): Brush {
+    val colors = List(3) { Color(Random.nextFloat(), Random.nextFloat(), Random.nextFloat()) }
+    return Brush.linearGradient(colors)
 }
 
 @RequiresApi(Build.VERSION_CODES.O)
