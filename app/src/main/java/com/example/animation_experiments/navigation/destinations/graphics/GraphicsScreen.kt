@@ -29,6 +29,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -137,20 +138,33 @@ fun GraphicsScreen(navigateHome: () -> Unit) {
 
                 "pointer" -> {
 
-                    val balls = remember { mutableStateListOf<Pair<Offset, Brush>>() }
+                    val ballList = remember { mutableStateListOf<Pair<Offset, Brush>>() }
                     val alphaValues =
                         remember { mutableStateMapOf<Offset, Animatable<Float, AnimationVector1D>>() }
                     val scope = rememberCoroutineScope()
 
-                    fun startFadeAnimation(ball: Offset) {
-                        val alpha = alphaValues[ball] ?: Animatable(0.5f).also {
-                            alphaValues[ball] = it
+                    var initialAlpha by remember {
+                        mutableFloatStateOf(1f)
+                    }
+
+                    var animationDuration by remember {
+                        mutableIntStateOf(1000)
+                    }
+
+                    var gradientType by remember {
+                        mutableStateOf(GradientType.Linear)
+                    }
+
+
+                    fun startFadeAnimation(ballOffset: Offset) {
+                        val alpha = alphaValues[ballOffset] ?: Animatable(initialAlpha).also {
+                            alphaValues[ballOffset] = it
                         }
-                        alphaValues[ball] = alpha
+                        alphaValues[ballOffset] = alpha
                         scope.launch {
                             alpha.animateTo(
                                 targetValue = 0f,
-                                animationSpec = tween(durationMillis = 1000)
+                                animationSpec = tween(durationMillis = animationDuration)
                             )
                         }
                     }
@@ -161,25 +175,106 @@ fun GraphicsScreen(navigateHome: () -> Unit) {
                             .pointerInteropFilter {
                                 if (it.action == MotionEvent.ACTION_DOWN) {
                                     val position = Offset(it.x, it.y)
-                                    val gradient = generateRainbowGradient()
-                                    balls.add(position to gradient)
+                                    val gradient =
+                                        generateRainbowGradient(gradientType = gradientType)
+                                    ballList.add(position to gradient)
                                     startFadeAnimation(Offset(it.x, it.y))
                                 }
                                 false
                             }
                             .pointerInput(Unit) {
                                 detectDragGestures(
-                                    onDrag = { change, dragAmount ->
+                                    onDrag = { change, _ ->
                                         val position = change.position
-                                        val gradient = generateRainbowGradient()
-                                        balls.add(position to gradient)
+                                        val gradient =
+                                            generateRainbowGradient(gradientType = gradientType)
+                                        ballList.add(position to gradient)
                                         startFadeAnimation(position)
                                     }
                                 )
                             }
                     ) {
-                        Canvas(modifier = Modifier.fillMaxSize()) {
-                            balls.forEach { (ball, gradient) ->
+                        Column {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Button(onClick = {
+                                    if (initialAlpha < 1f) {
+                                        initialAlpha += 0.1f
+                                    }
+                                }) {
+                                    Text("Initial Alpha +")
+                                }
+                                Button(onClick = {
+                                    if (initialAlpha > 0.1f) {
+                                        initialAlpha -= 0.1f
+                                    }
+                                }) {
+                                    Text("Initial Alpha -")
+                                }
+                                Text(text = initialAlpha.toString())
+                            }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+
+                                Button(onClick = {
+                                    animationDuration += 250
+                                }) {
+                                    Text("Anim duration +")
+                                }
+                                Button(onClick = {
+                                    if (animationDuration > 250) {
+                                        animationDuration -= 250
+                                    }
+                                }) {
+                                    Text("Anim duration-")
+                                }
+                                Text(text = "$animationDuration ms")
+                            }
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+
+                                Button(onClick = {
+                                    gradientType = GradientType.Linear
+                                }) {
+                                    Text("Lin")
+                                }
+                                Button(onClick = {
+                                    gradientType = GradientType.Vertical
+                                }) {
+                                    Text("Vert")
+                                }
+
+                                Button(onClick = {
+                                    gradientType = GradientType.Horizontal
+                                }) {
+                                    Text("Hor")
+                                }
+
+                                Button(onClick = {
+                                    gradientType = GradientType.Radial
+                                }) {
+                                    Text("Rad")
+                                }
+
+                                Button(onClick = {
+                                    gradientType = GradientType.Sweep
+                                }) {
+                                    Text("Sweep")
+                                }
+                            }
+                        }
+                        Canvas(
+                            modifier = Modifier
+                                .fillMaxSize()
+                        ) {
+                            ballList.forEach { (ball, gradient) ->
                                 val alpha = alphaValues[ball] ?: return@forEach
                                 drawCircle(
                                     brush = gradient,
@@ -378,7 +473,9 @@ fun generateRBGGradient(): Brush {
     return Brush.linearGradient(colors)
 }
 
-fun generateRainbowGradient(): Brush {
+fun generateRainbowGradient(
+    gradientType: GradientType = GradientType.Linear
+): Brush {
     val colors = listOf(
         Color(0xFFFF0000),  // Red
         Color(0xFFFF7F00),  // Orange
@@ -393,12 +490,27 @@ fun generateRainbowGradient(): Brush {
         Color(0xFFFF00FF),  // Magenta
         Color(0xFFFF007F)   // Rose
     )
-    return Brush.linearGradient(colors)
+
+    return when (gradientType) {
+        GradientType.Linear -> Brush.linearGradient(colors)
+        GradientType.Vertical -> Brush.verticalGradient(colors)
+        GradientType.Horizontal -> Brush.horizontalGradient(colors)
+        GradientType.Radial -> Brush.radialGradient(colors)
+        GradientType.Sweep -> Brush.sweepGradient(colors)
+    }
 }
 
 fun generateRandomGradient(): Brush {
     val colors = List(3) { Color(Random.nextFloat(), Random.nextFloat(), Random.nextFloat()) }
     return Brush.linearGradient(colors)
+}
+
+enum class GradientType {
+    Linear,
+    Vertical,
+    Horizontal,
+    Radial,
+    Sweep,
 }
 
 @RequiresApi(Build.VERSION_CODES.O)
