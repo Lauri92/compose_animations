@@ -20,7 +20,7 @@ fun NavigationSetup(
 ) {
     NavHost(
         navController = navController,
-        startDestination = Screen.Home.route
+        startDestination = Screen.Graphics.route
     ) {
 
         HomeComposable(

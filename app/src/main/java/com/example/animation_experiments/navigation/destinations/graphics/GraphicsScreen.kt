@@ -1,18 +1,31 @@
 package com.example.animation_experiments.navigation.destinations.graphics
 
 import android.os.Build
+import android.util.Log
+import android.view.MotionEvent
 import androidx.annotation.RequiresApi
-import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -20,11 +33,14 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -32,21 +48,22 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.PointMode
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.StrokeCap.Companion.Butt
 import androidx.compose.ui.graphics.StrokeCap.Companion.Round
-import androidx.compose.ui.graphics.drawscope.DrawStyle
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
-import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.input.pointer.PointerEvent
+import androidx.compose.ui.input.pointer.PointerInputChange
+import androidx.compose.ui.input.pointer.consumePositionChange
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.tooling.preview.Preview
-import kotlin.math.cos
-import kotlin.math.sin
+import androidx.compose.ui.unit.dp
 import kotlin.math.sqrt
 import kotlin.random.Random
 
 @RequiresApi(Build.VERSION_CODES.O)
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 fun GraphicsScreen(navigateHome: () -> Unit) {
     Scaffold(
@@ -66,7 +83,8 @@ fun GraphicsScreen(navigateHome: () -> Unit) {
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.Black)
-                .padding(top = paddingValues.calculateTopPadding()),
+                .padding(top = paddingValues.calculateTopPadding())
+                .padding(horizontal = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
@@ -80,158 +98,252 @@ fun GraphicsScreen(navigateHome: () -> Unit) {
                 label = "x"
             )
 
-            Canvas(modifier = Modifier
-                .fillMaxSize()
-                .clickable {
-                    rotateValue += 45f
-                }) {
-                val canvasQuadrantSize = size / 8F
-                drawRect(
-                    topLeft = Offset(0f, 200f),
-                    color = Color.Magenta,
-                    size = canvasQuadrantSize
-                )
+            var activeCanvas by remember {
+                mutableStateOf("pointer")
+            }
 
-                rotate(
-                    degrees = animatedRotation,
-                    pivot = Offset(x = size.width / 5f, y = 200f),
-                ) {
-                    drawRect(
-                        topLeft = Offset(x = size.width / 5f, y = 200f),
-                        color = Color.Green,
-                        size = canvasQuadrantSize
-                    )
+            Row(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Button(onClick = { activeCanvas = "basic" }) {
+                    Text(text = "Basic")
                 }
-
-                rotate(
-                    degrees = animatedRotation - 45f,
-                    pivot = Offset(x = size.width / 5f, y = 200f),
-                ) {
-                    drawRect(
-                        topLeft = Offset(x = size.width / 5f, y = 200f),
-                        color = Color.Cyan,
-                        size = canvasQuadrantSize
-                    )
+                Button(onClick = { activeCanvas = "pointer" }) {
+                    Text(text = "Pointer")
                 }
+            }
 
-                drawCircle(
-                    center = Offset(x = size.width / 5f, y = 200f),
-                    radius = 50f,
-                    color = Color.Blue
-                )
 
-                drawRoundRect(
-                    topLeft = Offset(0f, 500f),
-                    color = Color.Red,
-                    size = canvasQuadrantSize,
-                    cornerRadius = CornerRadius(20f)
-                )
+            when (activeCanvas) {
+                "basic" -> {
+                    Canvas(modifier = Modifier
+                        .fillMaxSize()
+                        .clickable {
+                            rotateValue += 45f
+                        }) {
 
-                drawLine(
-                    color = Color.Green,
-                    strokeWidth = 5f,
-                    cap = Round,
-                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f),
-                    start = Offset(0f, 500f),
-                    end = Offset(200f, 500f)
-                )
-                drawLine(
-                    color = Color.Green,
-                    strokeWidth = 5f,
-                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f),
-                    start = Offset(200f, 500f),
-                    end = Offset(100f, 775f)
-                )
-                drawLine(
-                    color = Color.Green,
-                    strokeWidth = 5f,
-                    cap = Round,
-                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f),
-                    start = Offset(100f, 775f),
-                    end = Offset(0f, 500f)
-                )
+                        val canvasQuadrantSize = size / 8F
 
-                drawOval(
-                    topLeft = Offset(0f, 800f),
-                    color = Color.Blue,
-                    size = canvasQuadrantSize / 2f
-                )
-
-                drawArc(
-                    topLeft = Offset(0f, 950f),
-                    useCenter = true,
-                    color = Color.Yellow,
-                    startAngle = 0f,
-                    sweepAngle = 270f,
-                    size = Size(width = 250f, height = 250f),
-                )
-
-                drawArc(
-                    topLeft = Offset(300f, 950f),
-                    useCenter = true,
-                    color = Color.Yellow,
-                    startAngle = 0f,
-                    sweepAngle = 270f,
-                    size = Size(width = 250f, height = 250f),
-                    style = Stroke(width = 5f, cap = Round)
-                )
-
-                drawPoints(
-                    color = Color.Green,
-                    cap = Round,
-                    points = listOf(
-                        Offset(300f, 950f),
-                        Offset(600f, 950f),
-                        Offset(900f, 950f),
-                    ),
-                    pointMode = PointMode.Points,
-                    strokeWidth = 10f
-
-                )
-
-                val centerX = 150f
-                val centerY = 1500f
-                val radius = 100f
-                val numPoints = 1000
-
-                val boundingSquareSide =
-                    2 * radius // Side length of the square that encloses the circle
-
-                repeat(numPoints) {
-                    var point: Offset
-                    do {
-                        // Generate a random point within the bounding square
-                        val x =
-                            centerX - boundingSquareSide / 2 + Random.nextFloat() * boundingSquareSide
-                        val y =
-                            centerY - boundingSquareSide / 2 + Random.nextFloat() * boundingSquareSide
-                        point = Offset(x, y)
-                    } while (!isInsideCircle(
-                            point,
-                            centerX,
-                            centerY,
-                            radius
+                        rectShapes(
+                            drawScope = this,
+                            canvasQuadrantSize = canvasQuadrantSize,
+                            size = size,
+                            animatedRotation = animatedRotation
                         )
-                    ) // Reject points outside the circle
 
-                    val color = generateRandomColor()
+                        varyingShapes(
+                            drawScope = this,
+                            canvasQuadrantSize = canvasQuadrantSize
+                        )
 
-                    drawCircle(
-                        color = color,
-                        center = point,
-                        radius = 1f
-                    )
+                        colorBall(this)
+                    }
                 }
 
-                drawCircle(
-                    color = Color.Transparent,
-                    center = Offset(centerX, centerY),
-                    radius = radius,
-                    style = Stroke(width = 2f),
-                )
+                "pointer" -> {
+                    var ballPosition by remember { mutableStateOf(Offset.Zero) }
+
+                    val alpha = remember { Animatable(1f) }
+
+                    LaunchedEffect(ballPosition) {
+                        alpha.snapTo(1f)
+                        alpha.animateTo(
+                            targetValue = 0f,
+                            animationSpec = tween(durationMillis = 1000)
+                        )
+                    }
+
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .pointerInteropFilter {
+                                Log.d("PointerEvent", "pointerInput: $it")
+                                if (it.action == MotionEvent.ACTION_DOWN) {
+                                    ballPosition = Offset(it.x, it.y)
+                                }
+                                false
+                            }
+                            .pointerInput(Unit) {
+                                detectDragGestures(
+                                    onDrag = { change, dragAmount ->
+                                        ballPosition += dragAmount
+                                    }
+                                )
+                            }
+                    ) {
+                        Canvas(modifier = Modifier.fillMaxSize()) {
+
+
+                            drawCircle(
+                                color = Color.Blue.copy(alpha = alpha.value),
+                                center = ballPosition,
+                                radius = 10f
+                            )
+                        }
+                    }
+                }
+
+                else -> {
+                    Text("Something else")
+                }
             }
         }
     }
+}
+
+fun rectShapes(
+    drawScope: DrawScope,
+    canvasQuadrantSize: Size,
+    size: Size,
+    animatedRotation: Float
+) {
+    drawScope.drawRect(
+        topLeft = Offset(0f, 200f),
+        color = Color.Magenta,
+        size = canvasQuadrantSize
+    )
+
+    drawScope.rotate(
+        degrees = animatedRotation,
+        pivot = Offset(x = size.width / 5f, y = 200f),
+    ) {
+        drawRect(
+            topLeft = Offset(x = size.width / 5f, y = 200f),
+            color = Color.Green,
+            size = canvasQuadrantSize
+        )
+    }
+
+    drawScope.rotate(
+        degrees = animatedRotation - 45f,
+        pivot = Offset(x = size.width / 5f, y = 200f),
+    ) {
+        drawRect(
+            topLeft = Offset(x = size.width / 5f, y = 200f),
+            color = Color.Cyan,
+            size = canvasQuadrantSize
+        )
+    }
+
+    drawScope.drawCircle(
+        center = Offset(x = size.width / 5f, y = 200f),
+        radius = 50f,
+        color = Color.Blue
+    )
+
+    drawScope.drawRoundRect(
+        topLeft = Offset(0f, 500f),
+        color = Color.Red,
+        size = canvasQuadrantSize,
+        cornerRadius = CornerRadius(20f)
+    )
+}
+
+fun varyingShapes(drawScope: DrawScope, canvasQuadrantSize: Size) {
+    drawScope.drawLine(
+        color = Color.Green,
+        strokeWidth = 5f,
+        cap = Round,
+        pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f),
+        start = Offset(0f, 500f),
+        end = Offset(200f, 500f)
+    )
+    drawScope.drawLine(
+        color = Color.Green,
+        strokeWidth = 5f,
+        pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f),
+        start = Offset(200f, 500f),
+        end = Offset(100f, 775f)
+    )
+    drawScope.drawLine(
+        color = Color.Green,
+        strokeWidth = 5f,
+        cap = Round,
+        pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f),
+        start = Offset(100f, 775f),
+        end = Offset(0f, 500f)
+    )
+
+    drawScope.drawOval(
+        topLeft = Offset(0f, 800f),
+        color = Color.Blue,
+        size = canvasQuadrantSize / 2f
+    )
+
+    drawScope.drawArc(
+        topLeft = Offset(0f, 950f),
+        useCenter = true,
+        color = Color.Yellow,
+        startAngle = 0f,
+        sweepAngle = 270f,
+        size = Size(width = 250f, height = 250f),
+    )
+
+    drawScope.drawArc(
+        topLeft = Offset(300f, 950f),
+        useCenter = true,
+        color = Color.Yellow,
+        startAngle = 0f,
+        sweepAngle = 270f,
+        size = Size(width = 250f, height = 250f),
+        style = Stroke(width = 5f, cap = Round)
+    )
+
+    drawScope.drawPoints(
+        color = Color.Green,
+        cap = Round,
+        points = listOf(
+            Offset(300f, 950f),
+            Offset(600f, 950f),
+            Offset(900f, 950f),
+        ),
+        pointMode = PointMode.Points,
+        strokeWidth = 10f
+    )
+}
+
+fun colorBall(drawScope: DrawScope) {
+    val centerX = 150f
+    val centerY = 1500f
+    val radius = 100f
+    val numPoints = 1000
+
+    val boundingSquareSide =
+        2 * radius // Side length of the square that encloses the circle
+
+    repeat(numPoints) {
+        var point: Offset
+        do {
+            // Generate a random point within the bounding square
+            val x =
+                centerX - boundingSquareSide / 2 + Random.nextFloat() * boundingSquareSide
+            val y =
+                centerY - boundingSquareSide / 2 + Random.nextFloat() * boundingSquareSide
+            point = Offset(x, y)
+        } while (!isInsideCircle(
+                point,
+                centerX,
+                centerY,
+                radius
+            )
+        ) // Reject points outside the circle
+
+        val color = generateRandomColor()
+
+        drawScope.drawCircle(
+            color = color,
+            center = point,
+            radius = 1f
+        )
+    }
+
+    drawScope.drawCircle(
+        color = Color.Transparent,
+        center = Offset(centerX, centerY),
+        radius = radius,
+        style = Stroke(width = 2f),
+    )
 }
 
 private fun isInsideCircle(
